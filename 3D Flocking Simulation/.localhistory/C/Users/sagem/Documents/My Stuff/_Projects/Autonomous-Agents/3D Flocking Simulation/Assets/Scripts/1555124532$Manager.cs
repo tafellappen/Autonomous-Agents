@@ -246,7 +246,7 @@ public class Manager : MonoBehaviour
         //script on every single line anyway, or making it less intuitive in the editor by moving those variables
         //to be natively part of this script instead of the flocker itself,
         //just use the first flocker in the list to set the wandering direction for the whole flock
-        wanderDirection = flockers[0].GetComponent<Flocker>().SetFlockWander();
+        wanderDirection = flockers[0].GetComponent<Flocker>().Wander();
         Debug.DrawLine(flockCenter, flockCenter + wanderDirection, Color.yellow);
 
     }

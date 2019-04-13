@@ -41,6 +41,10 @@ public abstract class Vehicle : MonoBehaviour
 
     //seeking and fleeing vectors / debug "gameobjects"
     public Vector3 targetLocation { get; set; }
+    //public Vector3 futurePosition { get; set; }
+    //[SerializeField] int howMuchFuture;
+    //[SerializeField] private GameObject futurePositionPrefab;
+    //private GameObject futurePosObject;
 
     //separation
     [SerializeField] protected float personalSpace;
@@ -87,12 +91,12 @@ public abstract class Vehicle : MonoBehaviour
     float verticalWanderAngle;
     int wanderCountdown;
     [SerializeField] bool wanderTogether;
+
     public bool WanderTogether
     {
         get { return wanderTogether; }
         set { wanderTogether = value; }
     }
-    Vector3 WanderDirection;
 
 
 
@@ -119,6 +123,7 @@ public abstract class Vehicle : MonoBehaviour
     protected float sqrMaxOutlierDistance;
 
     float maxTerrainHeight;
+    public Vector3 WanderDirection { get; set; }
 
 
     //public bool isABet { get; set; }
@@ -142,7 +147,7 @@ public abstract class Vehicle : MonoBehaviour
 
         vehiclePosition = transform.position; //initialize vehicle position
         terrainHeight = vehiclePosition.y;
-        maxTerrainHeight = manager.Terrain.terrainData.size.y;
+        maxTerrainHeight = manager.terrain.terrainData.size.y;
         //set up obstacle avoidance things
         //obstacles = manager.obstacles; //if the abount of obstacles is going to change, this will have to be updated elsewhere
         sqrSafeDistance = Mathf.Pow(safeDistance, 2);
@@ -183,7 +188,7 @@ public abstract class Vehicle : MonoBehaviour
         //float targetVerticalAngle = Mathf.Atan2(direction.x, direction.y) * Mathf.Rad2Deg;
 
         //keep vehicle above terrain
-        terrainHeight = manager.Terrain.SampleHeight(new Vector3(vehiclePosition.x, 0, vehiclePosition.z));
+        terrainHeight = manager.terrain.SampleHeight(new Vector3(vehiclePosition.x, 0, vehiclePosition.z));
 
         if (type == WanderType.TwoDimensions || vehiclePosition.y <= terrainHeight)
         {
@@ -196,6 +201,23 @@ public abstract class Vehicle : MonoBehaviour
         //transform.rotation = Quaternion.Euler(targetVerticalAngle, targetHorizontalAngle, 0);
         transform.LookAt(direction + vehiclePosition);
         transform.position = vehiclePosition;
+        
+        //Debug.DrawLine(transform.position, transform.position + transform.forward * 10, Color.yellow);
+
+        //define new future position
+        //futurePosition = vehiclePosition + (velocity * howMuchFuture) * Time.deltaTime;
+        //transform.LookAt(futurePosition);
+        //create the game object showing it
+        //    if (manager.drawDebug)
+        //    {
+        //        futurePosObject.transform.position = futurePosition;
+        //    }
+        //    else
+        //    {
+        //        // hide it underneath the scene floor. because it will be underneath the scene floor, 
+        //        //it doesnt really matther where it goes, so just put it underneath the origin for simplicity
+        //        futurePosObject.transform.position = new Vector3(0, -10, 0);
+        //    }
     }
 
     #region debug lines
@@ -271,6 +293,19 @@ public abstract class Vehicle : MonoBehaviour
 
     //}
     #endregion
+    //private void OnGUI()
+    //{
+    //    //change color
+    //    GUI.color = Color.black;
+
+    //    //increase text size
+    //    GUI.skin.box.fontSize = 20;
+
+    //    //Draw the GUI box with text
+
+    //    GUI.Box(new Rect(10, 10, 150, 50), seekingStr);
+    //    Debug.Log(seekingStr);
+    //}
 
     #region bounds
 
@@ -562,29 +597,46 @@ public abstract class Vehicle : MonoBehaviour
 
     #region wandering
 
-
     /// <summary>
-    /// Returns a direction vector for all flockers to wander in based on whether they are 2D or 3D flockers
+    /// Calls methods for wandering based on wether the wander type is 2 or 3 dimensional
     /// </summary>
-    public Vector3 SetFlockWander()
+    /// <returns>Seeking force to the "wander to point"</returns>
+    public Vector3 Wander()
     {
-
-        if (type == WanderType.TwoDimensions)
+        if(type == WanderType.TwoDimensions)
         {
-            WanderDirection = SetWanderDirection2();
+            WanderDirection = Wander2();
         }
         else
         {
-            WanderDirection = SetWanderDirection3();
+            WanderDirection = SetFlockWander3();
         }
 
         return WanderDirection;
     }
+    ////////public void FindFlockWander()
+    ////////{
+    ////////    wanderDirection = Vector3.zero;
+
+    ////////    //find sum of the wander vectors of each member in the flock
+    ////////    foreach (GameObject flocker in flockers)
+    ////////    {
+    ////////        wanderDirection += flocker.GetComponent<Flocker>().WanderDirection;
+    ////////    }
+
+    ////////    Debug.DrawLine(flockCenter, flockCenter + wanderDirection, Color.yellow);
+
+    ////////}
+
+    ////////public void MakeFlockWanderDirection()
+    ////////{
+    ////////    wanderDirection = flocker.GetComponent<Flocker>().Wander();
+    ////////}
 
     /// <summary>
-    /// Returns a 2D direction vector for all flockers to wander in (AKA a Vector3 with y=0)
+    /// Makes the vehicle wander randomly in 2 dimensions
     /// </summary>
-    private Vector3 SetWanderDirection2()
+    public Vector3 Wander2()
     {
         if (wanderCountdown > 0)
         {
@@ -593,28 +645,58 @@ public abstract class Vehicle : MonoBehaviour
         else
         {
             flatWanderAngle += Random.Range(-wanderAngleVariance, wanderAngleVariance); //change the wander angle by a random amount within a range
-            //verticalWanderAngle += Random.Range(-wanderAngleVariance, wanderAngleVariance); //change the wander angle by a random amount within a range
             wanderCountdown = wanderWaitTime;
         }
 
         //get location of projected circle by adding the direction multiplied by the distance of the wander circle
         wanderCircleLocation = vehiclePosition + (direction * wanderCircleDistance);
+        //get the radius as a vector by multiplying direction (a normalized vector) by the set radius of the circle
+        //wanderVectorRadius = direction * wanderCircleRadius; 
+        //wanderToPoint = wanderCircleLocation + (Quaternion.Euler(0, 0, wanderAngle) * wanderVectorRadius);
 
-        Vector3 wanderDirection = ((Quaternion.AngleAxis(flatWanderAngle, Vector3.up) * transform.right) * wanderCircleRadius);
+        //wanderToPoint = new Vector3(
+        //    wanderCircleLocation.x + Mathf.Cos(wanderAngle) * wanderCircleRadius,
+        //    0,
+        //    wanderCircleLocation.z + Mathf.Sin(wanderAngle) * wanderCircleRadius
+        //    );
+
+        wanderToPoint = wanderCircleLocation + ((Quaternion.AngleAxis(flatWanderAngle, Vector3.up) * transform.right) * wanderCircleRadius);
 
         //set as new target
         targetLocation = wanderToPoint;
-        Debug.DrawLine(wanderCircleLocation, transform.position, Color.red);
-        Debug.DrawLine(wanderCircleLocation, wanderToPoint, Color.gray);
-        Debug.DrawLine(transform.position, wanderToPoint, Color.cyan);
 
-        return wanderDirection;
+        Debug.DrawLine(wanderCircleLocation, wanderToPoint, Color.gray);
+        //Debug.Log("wandering " + wanderToPoint);
+        //float mousePosAngle = Mathf.Atan2(mouseWorldPos.x, mouseWorldPos.y) * Mathf.Rad2Deg;
+        return Seek(wanderToPoint) * seekWeight;
+        //return Vector3.zero;
+        //targetLocation = wanderToPoint;
     }
 
     /// <summary>
-    /// Returns a 3D direction vector for all flockers to wander in
+    /// Makes the vehicle wander randomly in 3 dimensions
     /// </summary>
-    private Vector3 SetWanderDirection3()
+    public Vector3 Wander3()
+    {
+        Vector3 wanderDirection = SetFlockWander3();
+        //get location of projected circle by adding the direction multiplied by the distance of the wander circle
+        wanderCircleLocation = vehiclePosition + (direction * wanderCircleDistance);
+        Debug.DrawLine(vehiclePosition, wanderCircleLocation, Color.cyan);
+
+        wanderToPoint = wanderCircleLocation + wanderDirection;
+
+        //set as new target
+        targetLocation = wanderToPoint;
+
+        Debug.DrawLine(wanderCircleLocation, wanderToPoint, Color.gray);
+        //Debug.Log("wandering " + wanderToPoint);
+        //float mousePosAngle = Mathf.Atan2(mouseWorldPos.x, mouseWorldPos.y) * Mathf.Rad2Deg;
+        return Seek(wanderToPoint) * seekWeight;
+        //return Vector3.zero;
+        //targetLocation = wanderToPoint;
+    }
+
+    public Vector3 SetFlockWander3()
     {
         if (wanderCountdown > 0)
         {
@@ -630,22 +712,46 @@ public abstract class Vehicle : MonoBehaviour
         //get location of projected circle by adding the direction multiplied by the distance of the wander circle
         wanderCircleLocation = vehiclePosition + (direction * wanderCircleDistance);
 
+        //get the radius as a vector by multiplying direction (a normalized vector) by the set radius of the circle
+        //wanderVectorRadius = direction * wanderCircleRadius; 
+        //wanderToPoint = wanderCircleLocation + (Quaternion.Euler(0, 0, wanderAngle) * wanderVectorRadius);
+
+        //wanderToPoint = new Vector3(
+        //    wanderCircleLocation.x + Mathf.Cos(wanderAngle) * wanderCircleRadius,
+        //    0,
+        //    wanderCircleLocation.z + Mathf.Sin(wanderAngle) * wanderCircleRadius
+        //    );
+
         Vector3 wanderDirection =
             (Quaternion.AngleAxis(flatWanderAngle, Vector3.up)
             * (Quaternion.AngleAxis(verticalWanderAngle, Vector3.forward) * transform.right)
             * wanderCircleRadius);
+
+        //wanderToPoint = wanderCircleLocation + WanderDirection;
+
+        //wanderToPoint =
+        //    wanderCircleLocation
+        //    + (Quaternion.AngleAxis(flatWanderAngle, Vector3.up)
+        //    * (Quaternion.AngleAxis(verticalWanderAngle, Vector3.forward) * transform.right)
+        //    * wanderCircleRadius);
+
+        //* ((Quaternion.AngleAxis(verticalWanderAngle, Vector3.up) * transform.right) 
 
         //set as new target
         targetLocation = wanderToPoint;
         Debug.DrawLine(wanderCircleLocation, transform.position, Color.red);
         Debug.DrawLine(wanderCircleLocation, wanderToPoint, Color.gray);
         Debug.DrawLine(transform.position, wanderToPoint, Color.cyan);
-
+        //Debug.Log("wandering " + wanderToPoint);
+        //float mousePosAngle = Mathf.Atan2(mouseWorldPos.x, mouseWorldPos.y) * Mathf.Rad2Deg;
+        //return Seek(wanderToPoint) * seekWeight;
+        //return Vector3.zero;
+        //targetLocation = wanderToPoint;
         return wanderDirection;
     }
 
     /// <summary>
-    /// Returns the wandering force for the flocker to wander in the same direction as every other flocker
+    /// "wanders" in the same direction as the flock
     /// </summary>
     public Vector3 WanderWithFlock()
     {
@@ -659,94 +765,12 @@ public abstract class Vehicle : MonoBehaviour
         targetLocation = wanderToPoint;
 
         Debug.DrawLine(wanderCircleLocation, wanderToPoint, Color.gray);
-
+        //Debug.Log("wandering " + wanderToPoint);
+        //float mousePosAngle = Mathf.Atan2(mouseWorldPos.x, mouseWorldPos.y) * Mathf.Rad2Deg;
         return Seek(wanderToPoint) * seekWeight;
+        //return Vector3.zero;
+        //targetLocation = wanderToPoint;
     }
-
-        #region old wandering code
-    ///// <summary>
-    ///// Calls methods for wandering based on wether the wander type is 2 or 3 dimensional
-    ///// </summary>
-    ///// <returns>Seeking force to the "wander to point"</returns>
-    //public Vector3 Wander()
-    //{
-    //    if(type == WanderType.TwoDimensions)
-    //    {
-    //        WanderDirection = Wander2();
-    //    }
-    //    else
-    //    {
-    //        WanderDirection = Wander3();
-    //    }
-
-    //    return WanderDirection;
-    //}
-
-    ///// <summary>
-    ///// Makes the vehicle wander randomly in 2 dimensions
-    ///// </summary>
-    //private Vector3 Wander2()
-    //{
-    //    //if (wanderCountdown > 0)
-    //    //{
-    //    //    wanderCountdown--;
-    //    //}
-    //    //else
-    //    //{
-    //    //    flatWanderAngle += Random.Range(-wanderAngleVariance, wanderAngleVariance); //change the wander angle by a random amount within a range
-    //    //    wanderCountdown = wanderWaitTime;
-    //    //}
-
-    //    ////get location of projected circle by adding the direction multiplied by the distance of the wander circle
-    //    //wanderCircleLocation = vehiclePosition + (direction * wanderCircleDistance);
-    //    ////get the radius as a vector by multiplying direction (a normalized vector) by the set radius of the circle
-    //    ////wanderVectorRadius = direction * wanderCircleRadius; 
-    //    ////wanderToPoint = wanderCircleLocation + (Quaternion.Euler(0, 0, wanderAngle) * wanderVectorRadius);
-
-    //    ////wanderToPoint = new Vector3(
-    //    ////    wanderCircleLocation.x + Mathf.Cos(wanderAngle) * wanderCircleRadius,
-    //    ////    0,
-    //    ////    wanderCircleLocation.z + Mathf.Sin(wanderAngle) * wanderCircleRadius
-    //    ////    );
-
-    //    WanderDirection = SetWanderDirection2();
-
-    //    wanderToPoint = wanderCircleLocation + ((Quaternion.AngleAxis(flatWanderAngle, Vector3.up) * transform.right) * wanderCircleRadius);
-
-    //    //set as new target
-    //    targetLocation = wanderToPoint;
-
-    //    Debug.DrawLine(wanderCircleLocation, wanderToPoint, Color.gray);
-    //    //Debug.Log("wandering " + wanderToPoint);
-    //    //float mousePosAngle = Mathf.Atan2(mouseWorldPos.x, mouseWorldPos.y) * Mathf.Rad2Deg;
-    //    return Seek(wanderToPoint) * seekWeight;
-    //    //return Vector3.zero;
-    //    //targetLocation = wanderToPoint;
-    //}
-
-    ///// <summary>
-    ///// Makes the vehicle wander randomly in 3 dimensions
-    ///// </summary>
-    //private Vector3 Wander3()
-    //{
-    //    WanderDirection = SetWanderDirection3();
-    //    //get location of projected circle by adding the direction multiplied by the distance of the wander circle
-    //    wanderCircleLocation = vehiclePosition + (direction * wanderCircleDistance);
-    //    Debug.DrawLine(vehiclePosition, wanderCircleLocation, Color.cyan);
-
-    //    wanderToPoint = wanderCircleLocation + WanderDirection;
-
-    //    //set as new target
-    //    targetLocation = wanderToPoint;
-
-    //    Debug.DrawLine(wanderCircleLocation, wanderToPoint, Color.gray);
-    //    //Debug.Log("wandering " + wanderToPoint);
-    //    //float mousePosAngle = Mathf.Atan2(mouseWorldPos.x, mouseWorldPos.y) * Mathf.Rad2Deg;
-    //    return Seek(wanderToPoint) * seekWeight;
-    //    //return Vector3.zero;
-    //    //targetLocation = wanderToPoint;
-    //}
-    #endregion
 
     #endregion
 

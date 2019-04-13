@@ -794,9 +794,8 @@ MonoBehaviour:
   centroid: {fileID: 879430883}
   flocker: {fileID: 1009967884634988, guid: b950c302beb422d49bb108e412da5a63, type: 2}
   flockerCount: 100
-  editorTerrain: {fileID: 571039921}
+  terrain: {fileID: 571039921}
   terrainData: {fileID: 0}
-  terrainBounds: {fileID: 0}
   percentOfFloor: 100
   centroidDebug: {fileID: 2100000, guid: 36a9f417c21f6a140a697e5f648e6a04, type: 2}
   centroidClear: {fileID: 2100000, guid: d6e723a2443043c4088fe15200f573c0, type: 2}

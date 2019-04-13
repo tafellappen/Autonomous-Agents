@@ -18,7 +18,7 @@ public class Manager : MonoBehaviour
 
     public List<GameObject> flockers { get; set; }
 
-    //Things to get/set bounds of the world
+    //so we can get the terrain dimensions later (to set the bounds)
     [SerializeField] Terrain terrain;
     public Terrain Terrain
     {
@@ -26,9 +26,10 @@ public class Manager : MonoBehaviour
         set { terrain = value; }
     }
     [SerializeField] TerrainData terrainData;
+    //[SerializeField] TerrainData terrainBounds;
     public Vector3 worldBounds { get; set; }
 
-    // Percent of the worldspace that flockers are allowed to be in
+    // Percent of the worldspace that things are allowed to be in
     [SerializeField] float percentOfFloor;
     private GameObject[] obstaclesArray;
     public List<GameObject> obstacles { get; set; }
@@ -75,7 +76,7 @@ public class Manager : MonoBehaviour
             AddFlocker();
         }
 
-        wanderTogether = flockers[0].GetComponent<Flocker>().WanderTogether;
+
 
         obstaclesArray = GameObject.FindGameObjectsWithTag("Obstacle"); //fix null issues
 
@@ -186,7 +187,7 @@ public class Manager : MonoBehaviour
     
 
     /// <summary>
-    /// Adds a flocker to the scene and creates necessary references to things
+    /// Adds a human to the scene and creates necessary references to things
     /// </summary>
     public void AddFlocker()
     {
@@ -237,21 +238,26 @@ public class Manager : MonoBehaviour
 
     }
 
-    /// <summary>
-    /// Sets the wandering direction for the flock
-    /// </summary>
+    //public void FindFlockWander()
+    //{
+    //    wanderDirection = Vector3.zero;
+
+    //    //find sum of the wander vectors of each member in the flock
+    //    foreach (GameObject flocker in flockers)
+    //    {
+    //        wanderDirection += flocker.GetComponent<Flocker>().WanderDirection;
+    //    }
+
+    //    Debug.DrawLine(flockCenter, flockCenter + wanderDirection, Color.yellow);
+        
+    //}
+
     public void MakeFlockWanderDirection()
     {
-        //Rather than making a whole new function in this script and either referencing variables in one flocker's 
-        //script on every single line anyway, or making it less intuitive in the editor by moving those variables
-        //to be natively part of this script instead of the flocker itself,
-        //just use the first flocker in the list to set the wandering direction for the whole flock
-        wanderDirection = flockers[0].GetComponent<Flocker>().SetFlockWander();
+        wanderDirection = flockers[0].GetComponent<Flocker>().Wander();
         Debug.DrawLine(flockCenter, flockCenter + wanderDirection, Color.yellow);
 
     }
-
-
 
     #endregion
 }
